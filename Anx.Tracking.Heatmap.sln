@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2046
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Anx.Tracking.Heatmap", "Anx.Tracking.Heatmap\Anx.Tracking.Heatmap.csproj", "{9AF19DC7-245A-4497-BECF-5FBB93943B4C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{0F7857E9-E7B6-470A-A39B-0E6EF63E5ED7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Anx.Tracking.Heatmap.Tests", "Tests\Anx.Tracking.Heatmap.Tests\Anx.Tracking.Heatmap.Tests.csproj", "{DC50DE6C-1F09-447A-A705-5CCD8DD8F256}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9AF19DC7-245A-4497-BECF-5FBB93943B4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9AF19DC7-245A-4497-BECF-5FBB93943B4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9AF19DC7-245A-4497-BECF-5FBB93943B4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9AF19DC7-245A-4497-BECF-5FBB93943B4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DC50DE6C-1F09-447A-A705-5CCD8DD8F256}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC50DE6C-1F09-447A-A705-5CCD8DD8F256}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC50DE6C-1F09-447A-A705-5CCD8DD8F256}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC50DE6C-1F09-447A-A705-5CCD8DD8F256}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DC50DE6C-1F09-447A-A705-5CCD8DD8F256} = {0F7857E9-E7B6-470A-A39B-0E6EF63E5ED7}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {89F1745A-617A-4E85-A15B-D9CFE0542A0C}
+	EndGlobalSection
+EndGlobal
