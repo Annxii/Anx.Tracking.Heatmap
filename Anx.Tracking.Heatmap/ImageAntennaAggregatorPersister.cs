@@ -13,84 +13,92 @@ namespace Anx.Tracking.Heatmap
 {
     public class ImageAntennaAggregatorPersister : IAggregatorPersister<ImageAntennaAggregator>, IDisposable
     {
-        [DebuggerDisplay("{LatStart}, {LonStart} ({counter})")]
-        private class SectorHandler : IDisposable
-        {
-            private const int pointSize = 10;
-
-            private int counter = 0;
-            private readonly Bitmap img;
-            private readonly Graphics g;
-            public SectorHandler(int width, int height, int latStart, int lonStart)
-            {
-                Width = width;
-                Height = height;
-                LatStart = latStart;
-                LonStart = lonStart;
-                img = new Bitmap(width, height);
-                g = Graphics.FromImage(img);
-            }
-
-            public int Width { get; private set; }
-            public int Height { get; private set; }
-            public int LatStart { get; private set; }
-            public int LonStart { get; private set; }
-
-            public void ApplyPoint(Point p)
-            {
-                counter++;
-                var x = Math.Min((int)((p.Lat - LatStart) * PixelsPerDegree), Width - 1);
-                var y = Math.Min((int)((p.Lon - LonStart) * PixelsPerDegree), Height - 1);
-                var x1 = x - pointSize / 2;
-                var y1 = y - pointSize / 2;
-                g.FillEllipse(GetBrush(x1, y1), x1, y1, pointSize, pointSize);
-            }
-
-            private Brush GetBrush(int x, int y)
-            {
-                var gradientPath = new GraphicsPath();
-                gradientPath.AddEllipse(x, y, pointSize, pointSize);
-                var brush = new PathGradientBrush(gradientPath);
-                brush.CenterColor = Color.FromArgb(100, Color.Black);
-                brush.SurroundColors = new[] { Color.FromArgb(0, Color.Black) };
-                return brush;
-            }
-
-            public void Dispose()
-            {
-                g.Dispose();
-                img.Dispose();
-            }
-
-            public void Save(string folderPath)
-            {
-                if (counter == 0)
-                    return;
-
-                g.Flush();
-                using (var fs = File.Open(Path.Combine(folderPath, $"{LatStart}_{LonStart}.png"), FileMode.OpenOrCreate, FileAccess.ReadWrite))
-                {
-                    img.Save(fs, ImageFormat.Png);
-                }
-            }
-        }
+        private const int pointSize = 10;
 
         private const int Longitudes = 360;
         private const int Latitudes = 180;
         private const int PixelsPerDegree = 24;
 
-        private readonly int SectorHeight;
-        private readonly int SectorWidth;
+        private int counter = 0;
+        private readonly Bitmap img;
+        private readonly Graphics g;
+
+        private readonly int width;
+        private readonly int height;
 
         private readonly string folderPath;
 
-        private readonly SectorHandler[,] sectors;
-        private readonly int latSectors;
-        private readonly int lonSectors;
-
-        public ImageAntennaAggregatorPersister(string folderPath, int latSectors = 4, int lonSectors = 8)
+        private ImageAntennaAggregatorPersister(string folderPath)
         {
             this.folderPath = folderPath;
+
+            width = Longitudes * PixelsPerDegree;
+            height = Latitudes * PixelsPerDegree;
+            img = new Bitmap(width, height);
+            g = Graphics.FromImage(img);
+
+            var segment = 45;
+            var pen = new Pen(Brushes.Red, 5);
+            for (int i = 1; i < Longitudes / segment; i++)
+            {
+                g.DrawLine(pen, segment * i * PixelsPerDegree, 0, segment * i * PixelsPerDegree, height);
+            }
+
+            for (int i = 1; i < Latitudes / segment; i++)
+            {
+                g.DrawLine(pen, 0, segment * i * PixelsPerDegree, width, segment * i * PixelsPerDegree);
+            }
+
+            g.Flush();
+        }
+
+        public void Dispose()
+        {
+
+        }
+
+        public Task Persist(ImageAntennaAggregator agg)
+        {
+            var points = agg.GetAllPoints();
+            if(points.Count == 0)
+                return Task.CompletedTask;
+
+            for (int i = 0; i < points.Count; i++)
+            {
+                ApplyPoint(points[i]);
+            }
+
+            g.Flush();
+            using (var fs = File.Open(Path.Combine(folderPath, $"biglayer.png"), FileMode.OpenOrCreate, FileAccess.ReadWrite))
+            {
+                img.Save(fs, ImageFormat.Png);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private void ApplyPoint(Point p)
+        {
+            counter++;
+            var x = Math.Min((int)((p.Lat + Latitudes / 2) * PixelsPerDegree), height - 1);
+            var y = Math.Min((int)((p.Lon + Longitudes / 2) * PixelsPerDegree), width - 1);
+            var x1 = x - pointSize / 2;
+            var y1 = y - pointSize / 2;
+            g.FillEllipse(GetBrush(x1, y1), x1, y1, pointSize, pointSize);
+        }
+
+        private Brush GetBrush(int x, int y)
+        {
+            var gradientPath = new GraphicsPath();
+            gradientPath.AddEllipse(x, y, pointSize, pointSize);
+            var brush = new PathGradientBrush(gradientPath);
+            brush.CenterColor = Color.FromArgb(100, Color.Black);
+            brush.SurroundColors = new[] { Color.FromArgb(0, Color.Black) };
+            return brush;
+        }
+
+        public static ImageAntennaAggregatorPersister Create(string folderPath)
+        {
             if (!Directory.Exists(folderPath))
                 Directory.CreateDirectory(folderPath);
             else
@@ -101,66 +109,7 @@ namespace Anx.Tracking.Heatmap
                 }
             }
 
-            this.latSectors = latSectors;
-            this.lonSectors = lonSectors;
-            SectorHeight = Latitudes / latSectors;
-            SectorWidth = Longitudes / lonSectors;
-            sectors = new SectorHandler[latSectors, lonSectors];
-            for (int x = 0; x < lonSectors; x++)
-            {
-                for (int y = 0; y < latSectors; y++)
-                {
-                    sectors[y, x] = new SectorHandler(
-                        width: SectorWidth * PixelsPerDegree,
-                        height: SectorHeight * PixelsPerDegree,
-                        latStart: -90 + y * SectorHeight,
-                        lonStart: -180 + x * SectorWidth
-                    );
-                }
-            }
-        }
-
-        private IEnumerable<SectorHandler> GetAllHandlers()
-        {
-            for (int y = 0; y < sectors.GetLength(0); y++)
-            {
-                for (int x = 0; x < sectors.GetLength(1); x++)
-                {
-                    yield return sectors[y, x];
-                }
-            }
-        }
-        
-        private SectorHandler GetSectorMap(Point p)
-        {
-            var x = (int)((p.Lon + 180) / SectorWidth);
-            var y = (int)((p.Lat + 90) / SectorHeight);
-            return sectors[y, x];
-        }
-
-        public void Dispose()
-        {
-            foreach (var item in GetAllHandlers())
-            {
-                item.Dispose();
-            }
-        }
-
-        public Task Persist(ImageAntennaAggregator agg)
-        {
-            var points = agg.GetAllPoints();
-            for (int i = 0; i < points.Count; i++)
-            {
-                var p = points[i];
-                GetSectorMap(p).ApplyPoint(p);
-            }
-
-            foreach (var item in GetAllHandlers())
-            {
-                item.Save(folderPath);
-            }
-
-            return Task.CompletedTask;
+            return new ImageAntennaAggregatorPersister(folderPath);
         }
     }
 }

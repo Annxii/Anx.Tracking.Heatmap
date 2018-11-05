@@ -57,9 +57,10 @@ namespace Anx.Tracking.Heatmap
             {
                 var filter = new TrackingFilterCollection();// new TrackingFilterCollection(new AntennaTrackingFilter("ekbi_a01"));
                 var source = new SourceReader(@"C:\Users\torst\Downloads\trackings\2018-10-23.csv");
-                var parser = new TrackingParser(new ParserDebugSink(t => t.Point.Lat == 0, s => log.WriteLine(s)));
+                var parser = new TrackingParser(new ParserDebugSink(t => t.Point.Lat == 0 || t.Point.Lon == 0, log.WriteLine));
+
                 using (var persister = new SqlGeographyAntennaAggregatorPersister("output.txt"))
-                using (var imgPersister = new ImageAntennaAggregatorPersister("images"))
+                using (var imgPersister = ImageAntennaAggregatorPersister.Create("images"))
                 {
                     var trackingCount = 0;
                     var antennaCount = 0;
@@ -73,11 +74,10 @@ namespace Anx.Tracking.Heatmap
                                 Console.WriteLine(trackingCount);
                         })
                         .GroupBy(x => x.Antenna)
+                        .Do(x => antennaCount++)
                         .Publish();
 
-                    antennaGroups.Do(x => antennaCount++)
-                        .SubscribeDisposable(disp);
-
+                    // SqlGeography Aggregation
                     antennaGroups
                         .SelectMany(x => x.Aggregate(
                             new SqlGeographyAntennaAggregator(x.Key)
@@ -85,6 +85,7 @@ namespace Anx.Tracking.Heatmap
                         ).SelectMany(x => Observable.FromAsync(() => persister.Persist(x)))
                         .SubscribeDisposable(disp);
 
+                    // Image Aggregation
                     antennaGroups
                         .SelectMany(x => x.Aggregate(
                             new ImageAntennaAggregator(x.Key)
@@ -92,8 +93,10 @@ namespace Anx.Tracking.Heatmap
                         ).SelectMany(x => Observable.FromAsync(() => imgPersister.Persist(x)))
                         .SubscribeDisposable(disp);
 
+                    // start processing
                     antennaGroups.ConnectDisposable(disp);
 
+                    // wait for completion
                     await antennaGroups.LastOrDefaultAsync();
 
                     Console.WriteLine($"Total count: {trackingCount} - Antenna count: {antennaCount}");
