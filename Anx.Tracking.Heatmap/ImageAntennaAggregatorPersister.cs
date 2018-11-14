@@ -11,13 +11,13 @@ using System.Threading.Tasks;
 
 namespace Anx.Tracking.Heatmap
 {
-    public class ImageAntennaAggregatorPersister : IAggregatorPersister<ImageAntennaAggregator>, IDisposable
+    public class ImageAntennaAggregatorPersister : AggregatorPersisterBase<ImageAntennaAggregator>
     {
-        private const int pointSize = 10;
+        private const int pointSize = 8;
 
         private const int Longitudes = 360;
         private const int Latitudes = 180;
-        private const int PixelsPerDegree = 24;
+        private const int PixelsPerDegree = 16;
 
         private int counter = 0;
         private readonly Bitmap img;
@@ -38,7 +38,7 @@ namespace Anx.Tracking.Heatmap
             g = Graphics.FromImage(img);
 
             var segment = 45;
-            var pen = new Pen(Brushes.Red, 5);
+            var pen = new Pen(new SolidBrush(Color.FromArgb(50, Color.Red)), 5);
             for (int i = 1; i < Longitudes / segment; i++)
             {
                 g.DrawLine(pen, segment * i * PixelsPerDegree, 0, segment * i * PixelsPerDegree, height);
@@ -52,12 +52,7 @@ namespace Anx.Tracking.Heatmap
             g.Flush();
         }
 
-        public void Dispose()
-        {
-
-        }
-
-        public Task Persist(ImageAntennaAggregator agg)
+        protected override Task PersistCore(ImageAntennaAggregator agg)
         {
             var points = agg.GetAllPoints();
             if(points.Count == 0)
@@ -80,10 +75,14 @@ namespace Anx.Tracking.Heatmap
         private void ApplyPoint(Point p)
         {
             counter++;
-            var x = Math.Min((int)((p.Lat + Latitudes / 2) * PixelsPerDegree), height - 1);
-            var y = Math.Min((int)((p.Lon + Longitudes / 2) * PixelsPerDegree), width - 1);
+            var x = Math.Min((int)((p.Lon + Longitudes / 2) * PixelsPerDegree), width - 1);
+            var y = Math.Min((int)((Latitudes / 2 - p.Lat) * PixelsPerDegree), height - 1);
             var x1 = x - pointSize / 2;
             var y1 = y - pointSize / 2;
+            if(x == width / 2 && y > PixelsPerDegree * 45)
+            {
+
+            }
             g.FillEllipse(GetBrush(x1, y1), x1, y1, pointSize, pointSize);
         }
 
@@ -92,8 +91,8 @@ namespace Anx.Tracking.Heatmap
             var gradientPath = new GraphicsPath();
             gradientPath.AddEllipse(x, y, pointSize, pointSize);
             var brush = new PathGradientBrush(gradientPath);
-            brush.CenterColor = Color.FromArgb(100, Color.Black);
-            brush.SurroundColors = new[] { Color.FromArgb(0, Color.Black) };
+            brush.CenterColor = Color.FromArgb(50, Color.Magenta);
+            brush.SurroundColors = new[] { Color.FromArgb(0, Color.Magenta) };
             return brush;
         }
 

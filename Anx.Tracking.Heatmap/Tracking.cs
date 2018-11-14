@@ -21,5 +21,7 @@ namespace Anx.Tracking.Heatmap
         public DateTime Timestamp { get; private set; }
         public Point Point { get; private set; }
         public int Alt { get; private set; }
+
+        public bool HasZeroCoordinates => (Point.Lat / 1 == 0) || (Point.Lon / 1 == 0);
     }
 }

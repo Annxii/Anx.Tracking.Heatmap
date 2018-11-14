@@ -1,0 +1,39 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="/" />
+    <script src="Cesium/Cesium.js"></script>
+    <link href="Cesium/Widgets/widgets.css" rel="stylesheet" />
+    <link href="css/main.css" rel="stylesheet" />
+</head>
+<body>
+    <div id="cesiumContainer"></div>
+    <div id="hidden-credits" style="display: none;"></div>
+    <script>
+        //Cesium.Ion.defaultAccessToken = 'your_access_token';
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            "timeline": false,
+            "infobox": false,
+            "animation": false,
+            "geocoder": false,
+            "homeButton": false,
+            "sceneModePicker": true,
+            "projectionPicker": false,
+            "creditContainer": 'hidden-credits',
+            "baseLayerPicker": false,
+
+            "sceneMode": Cesium.SceneMode.SCENE2D,
+            "imageryProvider": Cesium.createOpenStreetMapImageryProvider({
+                url: 'https://a.tile.openstreetmap.org/'
+            })
+        });
+
+        var layers = viewer.scene.imageryLayers;
+        var pointLayer = layers.addImageryProvider(new Cesium.SingleTileImageryProvider({
+            url: 'images/biglayer.png'
+        }));
+        pointLayer.alpha = 1;
+        pointLayer.brightness = 1;
+    </script>
+</body>
+</html>

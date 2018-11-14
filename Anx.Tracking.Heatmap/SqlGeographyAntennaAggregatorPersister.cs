@@ -8,7 +8,7 @@ using Microsoft.SqlServer.Types;
 
 namespace Anx.Tracking.Heatmap
 {
-    public class SqlGeographyAntennaAggregatorPersister : IAggregatorPersister<SqlGeographyAntennaAggregator>, IDisposable
+    public class SqlGeographyAntennaAggregatorPersister : AggregatorPersisterBase<SqlGeographyAntennaAggregator>
     {
         private readonly string outputPath;
         private readonly StreamWriter writer;
@@ -20,12 +20,12 @@ namespace Anx.Tracking.Heatmap
             writer = new StreamWriter(File.Open(outputPath, FileMode.Create, FileAccess.ReadWrite));
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             writer.Dispose();
         }
 
-        public async Task Persist(SqlGeographyAntennaAggregator agg)
+        protected override async Task PersistCore(SqlGeographyAntennaAggregator agg)
         {
             if (await TrySave(agg.Antenna, agg.Count, agg.GetSqlGeography(), counter > 0))
                 counter++;

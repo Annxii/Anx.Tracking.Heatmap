@@ -56,18 +56,24 @@ namespace Anx.Tracking.Heatmap
             using (var log = new StreamWriter(File.Open("log.txt", FileMode.Create, FileAccess.ReadWrite)))
             {
                 var filter = new TrackingFilterCollection();// new TrackingFilterCollection(new AntennaTrackingFilter("ekbi_a01"));
-                var source = new SourceReader(@"C:\Users\torst\Downloads\trackings\2018-10-23.csv");
+                var source = new SourceReader(new[] {
+                        "2018-10-23.csv",
+                        "2018-10-24.csv",
+                        "2018-10-25.csv"
+                    }.Select(x => Path.Combine(@"C:\Users\torst\Downloads\trackings\", x)).ToArray()
+                );
                 var parser = new TrackingParser(new ParserDebugSink(t => t.Point.Lat == 0 || t.Point.Lon == 0, log.WriteLine));
 
                 using (var persister = new SqlGeographyAntennaAggregatorPersister("output.txt"))
                 using (var imgPersister = ImageAntennaAggregatorPersister.Create("images"))
+                using (var jsonPersister = JsonArrayAggregatorPersister.Create("json"))
                 {
                     var trackingCount = 0;
                     var antennaCount = 0;
                     var antennaGroups = source.GetSource()
                         .Where(x => x.Length < 200)
                         .Select(x => parser.Parse(x))
-                        .Where(x => x != null && filter.Include(x))
+                        .Where(x => x != null && filter.Include(x) && !x.HasZeroCoordinates)
                         .Do(x =>
                         {
                             if ((++trackingCount % 100000) == 0)
@@ -78,12 +84,12 @@ namespace Anx.Tracking.Heatmap
                         .Publish();
 
                     // SqlGeography Aggregation
-                    antennaGroups
-                        .SelectMany(x => x.Aggregate(
-                            new SqlGeographyAntennaAggregator(x.Key)
-                            , (s, t) => s.AddPoint(t.Point) as SqlGeographyAntennaAggregator)
-                        ).SelectMany(x => Observable.FromAsync(() => persister.Persist(x)))
-                        .SubscribeDisposable(disp);
+                    //antennaGroups
+                    //    .SelectMany(x => x.Aggregate(
+                    //        new SqlGeographyAntennaAggregator(x.Key)
+                    //        , (s, t) => s.AddPoint(t.Point) as SqlGeographyAntennaAggregator)
+                    //    ).SelectMany(x => Observable.FromAsync(() => persister.Persist(x)))
+                    //    .SubscribeDisposable(disp);
 
                     // Image Aggregation
                     antennaGroups
@@ -92,6 +98,14 @@ namespace Anx.Tracking.Heatmap
                             , (s, t) => s.AddPoint(t.Point) as ImageAntennaAggregator)
                         ).SelectMany(x => Observable.FromAsync(() => imgPersister.Persist(x)))
                         .SubscribeDisposable(disp);
+
+                    // Json Aggregation
+                    //antennaGroups
+                    //    .SelectMany(x => x.Aggregate(
+                    //        new JsonArrayAggregator(x.Key)
+                    //        , (s, t) => s.AddPoint(t.Point) as JsonArrayAggregator)
+                    //    ).SelectMany(x => Observable.FromAsync(() => jsonPersister.Persist(x)))
+                    //    .SubscribeDisposable(disp);
 
                     // start processing
                     antennaGroups.ConnectDisposable(disp);
